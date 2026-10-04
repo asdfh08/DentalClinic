@@ -1,6 +1,7 @@
 package ru.mirea.dentalclinic.repository;
 
 import ru.mirea.dentalclinic.model.Dentist;
+import ru.mirea.dentalclinic.model.Specialization;
 import ru.mirea.dentalclinic.util.DatabaseManager;
 
 import java.sql.Connection;
@@ -33,7 +34,7 @@ public class DentistRepository extends AbstractRepository implements CrudReposit
 
             statement.setString(1, dentist.getFullName());
             statement.setString(2, dentist.getPhone());
-            statement.setString(3, dentist.getSpecialization());
+            statement.setString(3, dentist.getSpecialization().name());
             statement.setInt(4, dentist.getCabinet());
             statement.executeUpdate();
 
@@ -91,7 +92,7 @@ public class DentistRepository extends AbstractRepository implements CrudReposit
 
             statement.setString(1, dentist.getFullName());
             statement.setString(2, dentist.getPhone());
-            statement.setString(3, dentist.getSpecialization());
+            statement.setString(3, dentist.getSpecialization().name());
             statement.setInt(4, dentist.getCabinet());
             statement.setInt(5, dentist.getId());
             return statement.executeUpdate() > 0;
@@ -119,7 +120,7 @@ public class DentistRepository extends AbstractRepository implements CrudReposit
                 resultSet.getInt("id"),
                 resultSet.getString("full_name"),
                 resultSet.getString("phone"),
-                resultSet.getString("specialization"),
+                Specialization.parse(resultSet.getString("specialization")),
                 resultSet.getInt("cabinet")
         );
     }
