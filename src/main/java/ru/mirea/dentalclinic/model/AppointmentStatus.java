@@ -39,13 +39,27 @@ public enum AppointmentStatus {
         return !isFinal();
     }
 
-    /** Разрешённые переходы: CREATED -> CONFIRMED -> COMPLETED / CANCELLED / NO_SHOW. */
+    /**
+     * Разрешённые переходы:
+     *   CREATED   -> CONFIRMED / CANCELLED / NO_SHOW
+     *   CONFIRMED -> COMPLETED / CANCELLED / NO_SHOW
+     * Завершить можно только подтверждённый приём, а неявку — отметить и у неподтверждённой
+     * записи (иначе просроченная запись навсегда осталась бы "активной").
+     */
     public List<AppointmentStatus> allowedTransitions() {
         return switch (this) {
-            case CREATED -> List.of(CONFIRMED, CANCELLED);
+            case CREATED -> List.of(CONFIRMED, CANCELLED, NO_SHOW);
             case CONFIRMED -> List.of(COMPLETED, CANCELLED, NO_SHOW);
             case COMPLETED, CANCELLED, NO_SHOW -> List.of();
         };
+    }
+
+    /**
+     * Статус-итог приёма ("Завершена", "Неявка") можно поставить только после того,
+     * как время приёма наступило.
+     */
+    public boolean requiresStartedAppointment() {
+        return this == COMPLETED || this == NO_SHOW;
     }
 
     public boolean canChangeTo(AppointmentStatus target) {
