@@ -3,6 +3,7 @@ package ru.mirea.dentalclinic.service;
 import ru.mirea.dentalclinic.exception.BusinessException;
 import ru.mirea.dentalclinic.exception.EntityNotFoundException;
 import ru.mirea.dentalclinic.exception.ValidationException;
+import ru.mirea.dentalclinic.model.AppointmentStatus;
 import ru.mirea.dentalclinic.model.Patient;
 import ru.mirea.dentalclinic.repository.AppointmentRepository;
 import ru.mirea.dentalclinic.repository.PatientRepository;
@@ -67,8 +68,10 @@ public class PatientService {
     }
 
     /**
-     * БП-8: нельзя удалить пациента, у которого есть активные записи на приём.
-     * Завершённая история приёмов удаляется вместе с пациентом (ON DELETE CASCADE).
+     * БП-8: нельзя удалить пациента, у которого есть активные записи на приём
+     * или завершённые приёмы. Завершённый приём — это история лечения и выручка клиники
+     * (см. БП-7: саму такую запись удалить тоже нельзя). Отменённые записи и неявки
+     * удаляются вместе с пациентом (ON DELETE CASCADE).
      */
     public void delete(int id) {
         Patient patient = getById(id);
@@ -77,7 +80,16 @@ public class PatientService {
         if (activeAppointments > 0) {
             throw new BusinessException("нельзя удалить пациента " + patient.getFullName()
                     + ": у него есть активные записи на приём (" + activeAppointments + " шт.)."
-                    + " Сначала отмените или завершите их");
+                    + " Сначала отмените их");
+        }
+
+        long completed = appointmentRepository.findByPatientId(id).stream()
+                .filter(appointment -> appointment.getStatus() == AppointmentStatus.COMPLETED)
+                .count();
+        if (completed > 0) {
+            throw new BusinessException("нельзя удалить пациента " + patient.getFullName()
+                    + ": у него есть завершённые приёмы (" + completed + " шт.) —"
+                    + " это история лечения, она должна сохраняться");
         }
         patientRepository.deleteById(id);
     }

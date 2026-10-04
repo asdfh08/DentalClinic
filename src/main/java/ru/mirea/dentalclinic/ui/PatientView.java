@@ -102,7 +102,7 @@ public class PatientView extends BaseView {
 
         System.out.println("Будет удалён: " + patient.describe());
         if (appointments > 0) {
-            System.out.println("Внимание: вместе с пациентом будет удалена история его приёмов ("
+            System.out.println("Внимание: вместе с пациентом будут удалены его отменённые записи и неявки ("
                     + appointments + " шт.).");
         }
         if (!reader.confirm("Подтвердите удаление")) {
