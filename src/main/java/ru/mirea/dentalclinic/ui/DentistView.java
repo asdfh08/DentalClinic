@@ -1,7 +1,10 @@
 package ru.mirea.dentalclinic.ui;
 
 import ru.mirea.dentalclinic.model.Dentist;
+import ru.mirea.dentalclinic.model.Specialization;
 import ru.mirea.dentalclinic.service.DentistService;
+
+import java.util.List;
 
 /**
  * Экран работы с врачами-стоматологами.
@@ -52,7 +55,12 @@ public class DentistView extends BaseView {
         System.out.println("Новый врач:");
         String fullName = reader.readRequired("ФИО: ");
         String phone = reader.readRequired("Телефон: ");
-        String specialization = reader.readRequired("Специализация (терапевт, хирург, ортодонт...): ");
+        Specialization specialization = reader.readChoice("Специализация:",
+                List.of(Specialization.values()), this::specializationLabel);
+        if (specialization == null) {
+            System.out.println("Добавление врача отменено.");
+            return;
+        }
         int cabinet = reader.readInt("Номер кабинета: ");
 
         Dentist dentist = dentistService.create(fullName, phone, specialization, cabinet);
@@ -61,7 +69,9 @@ public class DentistView extends BaseView {
 
     private void findById() {
         int id = reader.readInt("Введите ID врача: ");
-        System.out.println(dentistService.getById(id).describe());
+        Dentist dentist = dentistService.getById(id);
+        System.out.println(dentist.describe());
+        System.out.println("Выполняет процедуры: " + dentist.getSpecialization().procedureTitles());
     }
 
     private void update() {
@@ -72,7 +82,14 @@ public class DentistView extends BaseView {
 
         String fullName = reader.readOptional("Новое ФИО: ");
         String phone = reader.readOptional("Новый телефон: ");
-        String specialization = reader.readOptional("Новая специализация: ");
+        Specialization specialization = current.getSpecialization();
+        if (reader.confirm("Изменить специализацию?")) {
+            Specialization chosen = reader.readChoice("Новая специализация:",
+                    List.of(Specialization.values()), this::specializationLabel);
+            if (chosen != null) {
+                specialization = chosen;
+            }
+        }
         String cabinetInput = reader.readOptional("Новый кабинет: ");
 
         int cabinet = current.getCabinet();
@@ -87,10 +104,15 @@ public class DentistView extends BaseView {
         Dentist updated = dentistService.update(id,
                 fullName.isBlank() ? current.getFullName() : fullName,
                 phone.isBlank() ? current.getPhone() : phone,
-                specialization.isBlank() ? current.getSpecialization() : specialization,
+                specialization,
                 cabinet);
 
         System.out.println("Данные обновлены: " + updated.describe());
+    }
+
+    /** Специализация и перечень процедур, которые она разрешает. */
+    private String specializationLabel(Specialization specialization) {
+        return specialization.getTitle() + " — " + specialization.procedureTitles();
     }
 
     private void delete() {
