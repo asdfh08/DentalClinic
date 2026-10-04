@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 660" width="1080" height="660" font-family="Segoe UI, Arial, Helvetica, sans-serif">
+
+    <rect x="0" y="0" width="1080" height="660" fill="#ffffff"/>
+
+    <text x="40" y="38" font-size="21" font-weight="700" fill="#0f172a">ER-диаграмма базы данных dental_clinic</text>
+    <text x="40" y="60" font-size="13" fill="#475569">КР 1 · ИС «Запись пациента на стоматологический приём» · PostgreSQL 13+</text>
+
+    <!-- ============================= PATIENTS ============================= -->
+    <g>
+        <rect x="40" y="90" width="380" height="192" rx="8" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+        <path d="M40 98 a8 8 0 0 1 8 -8 h364 a8 8 0 0 1 8 8 v28 h-380 z" fill="#0f766e"/>
+        <text x="54" y="118" font-size="14" font-weight="700" fill="#ffffff">PATIENTS · пациенты</text>
+
+        <g font-size="12" fill="#0f172a" font-family="Consolas, Courier New, monospace">
+            <text x="54" y="147" font-weight="700">id</text>
+            <text x="205" y="147">SERIAL</text>
+            <text x="322" y="147" fill="#b45309" font-weight="700">PK</text>
+
+            <text x="54" y="173">full_name</text>
+            <text x="205" y="173">VARCHAR(120)</text>
+            <text x="322" y="173" fill="#475569">NOT NULL</text>
+
+            <text x="54" y="199">phone</text>
+            <text x="205" y="199">VARCHAR(20)</text>
+            <text x="322" y="199" fill="#475569">NN, UQ</text>
+
+            <text x="54" y="225">email</text>
+            <text x="205" y="225">VARCHAR(120)</text>
+            <text x="322" y="225" fill="#475569">UNIQUE</text>
+
+            <text x="54" y="251">birth_date</text>
+            <text x="205" y="251">DATE</text>
+            <text x="322" y="251" fill="#475569">NN, CHECK</text>
+
+            <text x="54" y="277">created_at</text>
+            <text x="205" y="277">TIMESTAMP</text>
+            <text x="322" y="277" fill="#475569">DEFAULT</text>
+        </g>
+    </g>
+
+    <!-- ============================= DENTISTS ============================= -->
+    <g>
+        <rect x="40" y="400" width="380" height="166" rx="8" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+        <path d="M40 408 a8 8 0 0 1 8 -8 h364 a8 8 0 0 1 8 8 v28 h-380 z" fill="#0f766e"/>
+        <text x="54" y="428" font-size="14" font-weight="700" fill="#ffffff">DENTISTS · врачи-стоматологи</text>
+
+        <g font-size="12" fill="#0f172a" font-family="Consolas, Courier New, monospace">
+            <text x="54" y="457" font-weight="700">id</text>
+            <text x="205" y="457">SERIAL</text>
+            <text x="322" y="457" fill="#b45309" font-weight="700">PK</text>
+
+            <text x="54" y="483">full_name</text>
+            <text x="205" y="483">VARCHAR(120)</text>
+            <text x="322" y="483" fill="#475569">NOT NULL</text>
+
+            <text x="54" y="509">phone</text>
+            <text x="205" y="509">VARCHAR(20)</text>
+            <text x="322" y="509" fill="#475569">NN, UQ</text>
+
+            <text x="54" y="535">specialization</text>
+            <text x="205" y="535">VARCHAR(60)</text>
+            <text x="322" y="535" fill="#475569">NOT NULL</text>
+
+            <text x="54" y="561">cabinet</text>
+            <text x="205" y="561">INTEGER</text>
+            <text x="322" y="561" fill="#475569">NN, CHECK</text>
+        </g>
+    </g>
+
+    <!-- =========================== APPOINTMENTS =========================== -->
+    <g>
+        <rect x="620" y="160" width="420" height="270" rx="8" fill="#ffffff" stroke="#1d4ed8" stroke-width="2.5"/>
+        <path d="M620 168 a8 8 0 0 1 8 -8 h404 a8 8 0 0 1 8 8 v28 h-420 z" fill="#1d4ed8"/>
+        <text x="634" y="188" font-size="13.5" font-weight="700" fill="#ffffff">APPOINTMENTS · записи на приём (основная сущность)</text>
+
+        <g font-size="12" fill="#0f172a" font-family="Consolas, Courier New, monospace">
+            <text x="634" y="217" font-weight="700">id</text>
+            <text x="808" y="217">SERIAL</text>
+            <text x="940" y="217" fill="#b45309" font-weight="700">PK</text>
+
+            <text x="634" y="243" font-weight="700">patient_id</text>
+            <text x="808" y="243">INTEGER</text>
+            <text x="940" y="243" fill="#be123c" font-weight="700">FK, NN</text>
+
+            <text x="634" y="269" font-weight="700">dentist_id</text>
+            <text x="808" y="269">INTEGER</text>
+            <text x="940" y="269" fill="#be123c" font-weight="700">FK, NN</text>
+
+            <text x="634" y="295">appointment_time</text>
+            <text x="808" y="295">TIMESTAMP</text>
+            <text x="940" y="295" fill="#475569">NN, UQ*</text>
+
+            <text x="634" y="321">procedure_type</text>
+            <text x="808" y="321">VARCHAR(30)</text>
+            <text x="940" y="321" fill="#475569">NN, CHECK</text>
+
+            <text x="634" y="347">status</text>
+            <text x="808" y="347">VARCHAR(20)</text>
+            <text x="940" y="347" fill="#475569">NN, CHECK</text>
+
+            <text x="634" y="373">price</text>
+            <text x="808" y="373">NUMERIC(10,2)</text>
+            <text x="940" y="373" fill="#475569">NN, CHECK</text>
+
+            <text x="634" y="399">complaint</text>
+            <text x="808" y="399">VARCHAR(255)</text>
+            <text x="940" y="399" fill="#475569">NULL</text>
+
+            <text x="634" y="425">created_at</text>
+            <text x="808" y="425">TIMESTAMP</text>
+            <text x="940" y="425" fill="#475569">DEFAULT</text>
+        </g>
+    </g>
+
+    <!-- ===================== СВЯЗЬ 1: patients -> appointments ===================== -->
+    <polyline points="420,186 505,186 505,243 620,243" fill="none" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="420" cy="186" r="4.5" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+    <g stroke="#0f766e" stroke-width="2">
+        <line x1="612" y1="235" x2="612" y2="251"/>
+        <line x1="604" y1="243" x2="620" y2="235"/>
+        <line x1="604" y1="243" x2="620" y2="251"/>
+    </g>
+    <text x="430" y="179" font-size="12.5" font-weight="700" fill="#0f766e">1</text>
+    <text x="586" y="232" font-size="12.5" font-weight="700" fill="#0f766e">N</text>
+
+    <!-- ===================== СВЯЗЬ 2: dentists -> appointments ===================== -->
+    <polyline points="420,457 550,457 550,269 620,269" fill="none" stroke="#0f766e" stroke-width="2"/>
+    <circle cx="420" cy="457" r="4.5" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+    <g stroke="#0f766e" stroke-width="2">
+        <line x1="612" y1="261" x2="612" y2="277"/>
+        <line x1="604" y1="269" x2="620" y2="261"/>
+        <line x1="604" y1="269" x2="620" y2="277"/>
+    </g>
+    <text x="430" y="450" font-size="12.5" font-weight="700" fill="#0f766e">1</text>
+    <text x="586" y="290" font-size="12.5" font-weight="700" fill="#0f766e">N</text>
+
+    <!-- ============================== ОПИСАНИЕ СВЯЗЕЙ ============================== -->
+    <g>
+        <rect x="620" y="452" width="420" height="102" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+        <text x="636" y="477" font-size="12.5" font-weight="700" fill="#0f172a">Связи (один-ко-многим)</text>
+        <g font-size="11.5" fill="#334155">
+            <text x="636" y="500">patients.id (1) —— (N) appointments.patient_id</text>
+            <text x="636" y="516" fill="#64748b">FK fk_appointments_patient · ON DELETE CASCADE</text>
+            <text x="636" y="533">dentists.id (1) —— (N) appointments.dentist_id</text>
+            <text x="636" y="548" fill="#64748b">FK fk_appointments_dentist · ON DELETE RESTRICT</text>
+        </g>
+    </g>
+
+    <!-- ============================= ЛЕГЕНДА ============================= -->
+    <g font-size="11.5" fill="#475569">
+        <text x="40" y="600" font-weight="700" fill="#0f172a">Обозначения</text>
+        <text x="40" y="620">PK — первичный ключ · FK — внешний ключ · NN — NOT NULL · UQ — UNIQUE · CHECK — ограничение значений</text>
+        <text x="40" y="640">UQ* — составное ограничение (dentist_id, appointment_time): врач не может вести два приёма одновременно</text>
+    </g>
+</svg>

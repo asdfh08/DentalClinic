@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Отключает служебные сообщения Apache POI, чтобы они не мешали консольному меню -->
+<Configuration status="OFF">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_ERR"/>
+    </Appenders>
+    <Loggers>
+        <Root level="off">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>

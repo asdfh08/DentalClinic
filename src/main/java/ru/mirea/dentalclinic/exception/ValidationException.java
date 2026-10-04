@@ -1,7 +1,10 @@
 package ru.mirea.dentalclinic.exception;
 
-/** Введены некорректные данные (пустое поле, неверный формат, значение вне диапазона). */
-public class ValidationException extends ClinicException {
+/**
+ * Некорректные данные объекта: пустое ФИО, неверный телефон, отрицательная цена и т.п.
+ * Выбрасывается на уровне сервисов и моделей (проверка формата данных).
+ */
+public class ValidationException extends AppException {
 
     public ValidationException(String message) {
         super(message);

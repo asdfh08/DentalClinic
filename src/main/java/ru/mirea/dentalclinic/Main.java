@@ -1,100 +1,76 @@
 package ru.mirea.dentalclinic;
 
-import ru.mirea.dentalclinic.exception.ClinicException;
-import ru.mirea.dentalclinic.model.Dentist;
-import ru.mirea.dentalclinic.model.Patient;
-import ru.mirea.dentalclinic.model.ProcedureType;
+import ru.mirea.dentalclinic.exception.AppException;
 import ru.mirea.dentalclinic.repository.AppointmentRepository;
 import ru.mirea.dentalclinic.repository.DentistRepository;
 import ru.mirea.dentalclinic.repository.PatientRepository;
 import ru.mirea.dentalclinic.service.AppointmentService;
 import ru.mirea.dentalclinic.service.DentistService;
 import ru.mirea.dentalclinic.service.PatientService;
+import ru.mirea.dentalclinic.service.StatisticsService;
+import ru.mirea.dentalclinic.ui.AnalyticsView;
 import ru.mirea.dentalclinic.ui.AppointmentView;
+import ru.mirea.dentalclinic.ui.ConsoleApp;
 import ru.mirea.dentalclinic.ui.ConsoleReader;
 import ru.mirea.dentalclinic.ui.DentistView;
 import ru.mirea.dentalclinic.ui.PatientView;
+import ru.mirea.dentalclinic.util.CsvExporter;
+import ru.mirea.dentalclinic.util.DataExporter;
 import ru.mirea.dentalclinic.util.DatabaseManager;
+import ru.mirea.dentalclinic.util.DatabaseTablePrinter;
+import ru.mirea.dentalclinic.util.ExcelExporter;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Scanner;
 
 /**
- * Точка входа консольного приложения. Здесь собираются все слои:
- * база данных -> репозитории -> сервисы -> консольные экраны.
+ * Точка входа приложения.
+ *
+ * Здесь только сборка слоёв (Repository -> Service -> Console UI).
+ * Вся логика вынесена в отдельные классы — реализовывать систему внутри Main запрещено.
  */
 public class Main {
 
     public static void main(String[] args) {
-        DatabaseManager.init();
 
+        // 1. Подключение к базе данных (MySQL или PostgreSQL — по db.properties)
+        try {
+            DatabaseManager.init();
+        } catch (AppException e) {
+            System.out.println("Не удалось запустить приложение: " + e.getMessage());
+            System.out.println("Проверьте, что сервер базы данных запущен, база создана скриптом");
+            System.out.println("из папки db и параметры в src/main/resources/db.properties верны.");
+            return;
+        }
+
+        // 2. Слой Repository (JDBC)
         PatientRepository patientRepository = new PatientRepository();
         DentistRepository dentistRepository = new DentistRepository();
         AppointmentRepository appointmentRepository = new AppointmentRepository();
 
+        // 3. Слой Service (бизнес-логика и проверки)
         PatientService patientService = new PatientService(patientRepository, appointmentRepository);
         DentistService dentistService = new DentistService(dentistRepository, appointmentRepository);
         AppointmentService appointmentService =
                 new AppointmentService(appointmentRepository, patientService, dentistService);
+        StatisticsService statisticsService =
+                new StatisticsService(patientService, dentistService, appointmentService);
 
-        seedDemoData(patientService, dentistService, appointmentService);
+        // Полиморфизм: два разных экспортёра за одним интерфейсом DataExporter
+        List<DataExporter> exporters = List.of(new ExcelExporter(), new CsvExporter());
 
-        ConsoleReader reader = new ConsoleReader(System.in);
+        // 4. Слой Console UI
+        Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8);
+        ConsoleReader reader = new ConsoleReader(scanner);
+
         PatientView patientView = new PatientView(reader, patientService);
         DentistView dentistView = new DentistView(reader, dentistService);
         AppointmentView appointmentView =
                 new AppointmentView(reader, appointmentService, patientService, dentistService);
+        AnalyticsView analyticsView = new AnalyticsView(reader, appointmentService, patientService,
+                dentistService, statisticsService, exporters, new DatabaseTablePrinter());
 
-        System.out.println("Стоматологическая клиника");
-        boolean running = true;
-        while (running) {
-            System.out.println();
-            System.out.println("===== Главное меню =====");
-            System.out.println("1. Пациенты");
-            System.out.println("2. Врачи");
-            System.out.println("3. Записи на приём");
-            System.out.println("0. Выход");
-
-            int choice = reader.readInt("Выберите раздел: ");
-            switch (choice) {
-                case 1 -> patientView.menu();
-                case 2 -> dentistView.menu();
-                case 3 -> appointmentView.menu();
-                case 0 -> running = false;
-                default -> System.out.println("Ошибка: пункта меню " + choice + " не существует.");
-            }
-        }
-        System.out.println("До свидания!");
-    }
-
-    /** При пустой базе добавляет несколько демонстрационных записей. */
-    private static void seedDemoData(PatientService patientService, DentistService dentistService,
-                                     AppointmentService appointmentService) {
-        if (patientService.count() > 0 || dentistService.count() > 0) {
-            return;
-        }
-        try {
-            Dentist therapist = dentistService.create("Иванов Пётр Сергеевич", "+74951112233", "Терапевт", 101);
-            Dentist surgeon = dentistService.create("Соколова Анна Викторовна", "+74951112244", "Хирург", 102);
-
-            Patient first = patientService.create("Смирнов Алексей Игоревич", "+79001234567",
-                    "smirnov@example.com", LocalDate.of(1990, 5, 14));
-            Patient second = patientService.create("Кузнецова Мария Олеговна", "+79007654321",
-                    null, LocalDate.of(1985, 11, 2));
-
-            LocalDate day = LocalDate.now().plusDays(1);
-            if (day.getDayOfWeek() == DayOfWeek.SUNDAY) {
-                day = day.plusDays(1);
-            }
-            LocalDateTime time = day.atTime(10, 0);
-
-            appointmentService.create(first.getId(), therapist.getId(), time,
-                    ProcedureType.CONSULTATION, null, "Болит зуб от холодного");
-            appointmentService.create(second.getId(), surgeon.getId(), time.plusHours(2),
-                    ProcedureType.EXTRACTION, null, null);
-        } catch (ClinicException e) {
-            System.out.println("Не удалось добавить демонстрационные данные: " + e.getMessage());
-        }
+        new ConsoleApp(reader, patientView, dentistView, appointmentView, analyticsView).run();
     }
 }

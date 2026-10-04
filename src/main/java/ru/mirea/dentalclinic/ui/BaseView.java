@@ -1,8 +1,13 @@
 package ru.mirea.dentalclinic.ui;
 
-import ru.mirea.dentalclinic.exception.ClinicException;
+import ru.mirea.dentalclinic.exception.AppException;
 
-/** Базовый класс консольных экранов: заголовок и безопасный запуск действий. */
+/**
+ * Базовый класс всех экранов консольного интерфейса.
+ *
+ * Здесь собрана единая обработка ошибок: любое исключение приложения
+ * превращается в сообщение пользователю, и программа продолжает работу.
+ */
 public abstract class BaseView {
 
     protected final ConsoleReader reader;
@@ -11,22 +16,21 @@ public abstract class BaseView {
         this.reader = reader;
     }
 
-    /** Название экрана, которое печатается в заголовке меню. */
+    /** Заголовок экрана — каждый наследник возвращает свой (полиморфизм). */
     protected abstract String screenTitle();
 
     protected void printHeader() {
-        System.out.println();
-        System.out.println("===== " + screenTitle() + " =====");
+        System.out.println(ConsoleFormat.subTitle(screenTitle()));
     }
 
     /**
-     * Выполняет действие меню и превращает ошибки приложения в понятное сообщение,
-     * чтобы программа не завершалась из-за неверного ввода или нарушенного правила.
+     * Выполняет действие и перехватывает исключения, чтобы программа
+     * не завершалась аварийно и возвращалась в то же меню.
      */
     protected void safe(Runnable action) {
         try {
             action.run();
-        } catch (ClinicException e) {
+        } catch (AppException e) {
             System.out.println("Ошибка: " + e.getMessage());
         } catch (RuntimeException e) {
             System.out.println("Непредвиденная ошибка: " + e);

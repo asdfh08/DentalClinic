@@ -5,116 +5,135 @@ import ru.mirea.dentalclinic.model.Dentist;
 import ru.mirea.dentalclinic.model.Patient;
 import ru.mirea.dentalclinic.util.Formats;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-/** Форматирование таблиц и карточек для вывода в консоль. */
+/**
+ * Формирование текстовых таблиц для вывода в консоль.
+ * Отвечает только за отображение — данных не изменяет.
+ */
 public final class ConsoleFormat {
 
-    private static final int MAX_CELL = 28;
-    private static final String EMPTY_LIST = "Список пуст.";
+    private static final String LINE = "=".repeat(118);
 
     private ConsoleFormat() {
     }
 
-    public static String patientsTable(List<Patient> patients) {
-        if (patients.isEmpty()) {
-            return EMPTY_LIST;
-        }
-        List<String[]> rows = new ArrayList<>();
-        for (Patient p : patients) {
-            rows.add(new String[]{
-                    String.valueOf(p.getId()), p.getFullName(), p.getPhone(),
-                    p.getEmail() == null ? "-" : p.getEmail(),
-                    Formats.date(p.getBirthDate()), String.valueOf(p.getAge())});
-        }
-        return table(new String[]{"ID", "ФИО", "Телефон", "E-mail", "Дата рожд.", "Возраст"}, rows);
+    public static String title(String text) {
+        return LINE + System.lineSeparator()
+                + "  " + text.toUpperCase() + System.lineSeparator()
+                + LINE;
     }
 
-    public static String dentistsTable(List<Dentist> dentists) {
-        if (dentists.isEmpty()) {
-            return EMPTY_LIST;
-        }
-        List<String[]> rows = new ArrayList<>();
-        for (Dentist d : dentists) {
-            rows.add(new String[]{
-                    String.valueOf(d.getId()), d.getFullName(), d.getPhone(),
-                    d.getSpecialization(), String.valueOf(d.getCabinet())});
-        }
-        return table(new String[]{"ID", "ФИО", "Телефон", "Специализация", "Кабинет"}, rows);
+    public static String subTitle(String text) {
+        return System.lineSeparator() + "--- " + text.toUpperCase() + " ---";
     }
 
     public static String appointmentsTable(List<Appointment> appointments) {
         if (appointments.isEmpty()) {
-            return EMPTY_LIST;
+            return "Записей на приём не найдено.";
         }
-        List<String[]> rows = new ArrayList<>();
-        for (Appointment a : appointments) {
-            rows.add(new String[]{
-                    String.valueOf(a.getId()), Formats.dateTime(a.getAppointmentTime()),
-                    a.getPatientName(), a.getDentistName(),
-                    a.getProcedureType().getTitle(), a.getStatus().getTitle(),
-                    Formats.money(a.getPrice())});
+
+        String format = "%-4s | %-16s | %-24s | %-22s | %-24s | %-13s | %14s%n";
+        StringBuilder table = new StringBuilder();
+        table.append(String.format(format, "ID", "Дата и время", "Пациент", "Врач",
+                "Процедура", "Статус", "Стоимость"));
+        table.append("-".repeat(130)).append(System.lineSeparator());
+
+        for (Appointment appointment : appointments) {
+            table.append(String.format(format,
+                    appointment.getId(),
+                    Formats.dateTime(appointment.getAppointmentTime()),
+                    Formats.cut(appointment.getPatientName(), 24),
+                    Formats.cut(appointment.getDentistName(), 22),
+                    Formats.cut(appointment.getProcedureType().getTitle(), 24),
+                    Formats.cut(appointment.getStatus().getTitle(), 13),
+                    Formats.money(appointment.getPrice())));
         }
-        return table(new String[]{"ID", "Дата и время", "Пациент", "Врач", "Процедура", "Статус", "Стоимость"}, rows);
+        table.append("Всего записей: ").append(appointments.size());
+        return table.toString();
     }
 
-    public static String appointmentCard(Appointment a) {
-        return "--------------------------------------------\n"
-                + "Запись #" + a.getId() + "\n"
-                + "Пациент:   " + a.getPatientName() + " (ID " + a.getPatientId() + ")\n"
-                + "Врач:      " + a.getDentistName() + " (ID " + a.getDentistId() + ")\n"
-                + "Приём:     " + Formats.dateTime(a.getAppointmentTime())
-                + " - " + Formats.time(a.getEndTime()) + "\n"
-                + "Процедура: " + a.getProcedureType().getTitle() + "\n"
-                + "Статус:    " + a.getStatus().getTitle() + "\n"
-                + "Стоимость: " + Formats.money(a.getPrice()) + "\n"
-                + "Жалоба:    " + (a.getComplaint().isBlank() ? "-" : a.getComplaint()) + "\n"
-                + "Создана:   " + Formats.dateTime(a.getCreatedAt()) + "\n"
-                + "--------------------------------------------";
+    public static String appointmentCard(Appointment appointment) {
+        StringBuilder card = new StringBuilder();
+        card.append(System.lineSeparator()).append("ЗАПИСЬ НА ПРИЁМ #").append(appointment.getId())
+                .append(System.lineSeparator());
+        card.append("  Пациент:       ").append(appointment.getPatientName())
+                .append(" (ID ").append(appointment.getPatientId()).append(')')
+                .append(System.lineSeparator());
+        card.append("  Врач:          ").append(appointment.getDentistName())
+                .append(" (ID ").append(appointment.getDentistId()).append(')')
+                .append(System.lineSeparator());
+        card.append("  Начало приёма: ").append(Formats.dateTime(appointment.getAppointmentTime()))
+                .append(System.lineSeparator());
+        card.append("  Окончание:     ").append(Formats.time(appointment.getEndTime()))
+                .append(" (").append(appointment.getProcedureType().getDurationMinutes()).append(" мин)")
+                .append(System.lineSeparator());
+        card.append("  Процедура:     ").append(appointment.getProcedureType().getTitle())
+                .append(" [").append(appointment.getProcedureType().name()).append(']')
+                .append(System.lineSeparator());
+        card.append("  Статус:        ").append(appointment.getStatus().getTitle())
+                .append(" [").append(appointment.getStatus().name()).append(']')
+                .append(System.lineSeparator());
+        card.append("  Стоимость:     ").append(Formats.money(appointment.getPrice()))
+                .append(System.lineSeparator());
+        card.append("  Жалоба:        ")
+                .append(appointment.getComplaint().isBlank() ? "не указана" : appointment.getComplaint())
+                .append(System.lineSeparator());
+        card.append("  Создана:       ").append(Formats.dateTime(appointment.getCreatedAt()));
+        return card.toString();
     }
 
-    private static String table(String[] headers, List<String[]> rows) {
-        int[] widths = new int[headers.length];
-        for (int i = 0; i < headers.length; i++) {
-            widths[i] = headers[i].length();
-        }
-        for (String[] row : rows) {
-            for (int i = 0; i < row.length; i++) {
-                row[i] = cut(row[i]);
-                widths[i] = Math.max(widths[i], row[i].length());
-            }
+    public static String patientsTable(List<Patient> patients) {
+        if (patients.isEmpty()) {
+            return "Пациентов не найдено.";
         }
 
-        StringBuilder out = new StringBuilder();
-        appendRow(out, headers, widths);
-        out.append("\n");
-        int total = headers.length * 3 - 1;
-        for (int width : widths) {
-            total += width;
+        String format = "%-4s | %-30s | %-16s | %-28s | %-14s | %-8s%n";
+        StringBuilder table = new StringBuilder();
+        table.append(String.format(format, "ID", "ФИО", "Телефон", "E-mail", "Дата рожд.", "Возраст"));
+        table.append("-".repeat(118)).append(System.lineSeparator());
+
+        for (Patient patient : patients) {
+            table.append(String.format(format,
+                    patient.getId(),
+                    Formats.cut(patient.getFullName(), 30),
+                    patient.getPhone(),
+                    Formats.cut(patient.getEmail() == null ? "-" : patient.getEmail(), 28),
+                    Formats.date(patient.getBirthDate()),
+                    patient.getAge()));
         }
-        out.append("-".repeat(total));
-        for (String[] row : rows) {
-            out.append("\n");
-            appendRow(out, row, widths);
-        }
-        return out.toString();
+        table.append("Всего пациентов: ").append(patients.size());
+        return table.toString();
     }
 
-    private static void appendRow(StringBuilder out, String[] cells, int[] widths) {
-        for (int i = 0; i < cells.length; i++) {
-            if (i > 0) {
-                out.append(" | ");
-            }
-            out.append(cells[i]);
-            out.append(" ".repeat(widths[i] - cells[i].length()));
+    public static String dentistsTable(List<Dentist> dentists) {
+        if (dentists.isEmpty()) {
+            return "Врачей не найдено.";
         }
+
+        String format = "%-4s | %-30s | %-16s | %-30s | %-8s%n";
+        StringBuilder table = new StringBuilder();
+        table.append(String.format(format, "ID", "ФИО", "Телефон", "Специализация", "Кабинет"));
+        table.append("-".repeat(104)).append(System.lineSeparator());
+
+        for (Dentist dentist : dentists) {
+            table.append(String.format(format,
+                    dentist.getId(),
+                    Formats.cut(dentist.getFullName(), 30),
+                    dentist.getPhone(),
+                    Formats.cut(dentist.getSpecialization(), 30),
+                    dentist.getCabinet()));
+        }
+        table.append("Всего врачей: ").append(dentists.size());
+        return table.toString();
     }
 
-    private static String cut(String value) {
-        if (value == null) {
-            return "-";
+    public static String statistics(Map<String, String> statistics) {
+        StringBuilder result = new StringBuilder();
+        for (Map.Entry<String, String> entry : statistics.entrySet()) {
+            result.append(String.format("%-48s %s%n", entry.getKey() + ":", entry.getValue()));
         }
-        return value.length() <= MAX_CELL ? value : value.substring(0, MAX_CELL - 1) + "…";
+        return result.toString();
     }
 }
