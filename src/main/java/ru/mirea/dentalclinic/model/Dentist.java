@@ -20,11 +20,6 @@ public class Dentist extends Person {
         this(0, fullName, phone, specialization, cabinet);
     }
 
-    /** Может ли врач выполнять процедуру — определяется его специализацией. */
-    public boolean canPerform(ProcedureType procedureType) {
-        return specialization.canPerform(procedureType);
-    }
-
     @Override
     public String role() {
         return "Врач-стоматолог";

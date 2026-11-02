@@ -15,6 +15,7 @@ import java.util.Optional;
 
 /**
  * Слой Repository для таблицы dentists (врачи-стоматологи).
+ * Специализация хранится в базе как русское название константы {@link Specialization}.
  */
 public class DentistRepository extends AbstractRepository implements CrudRepository<Dentist> {
 
@@ -34,7 +35,7 @@ public class DentistRepository extends AbstractRepository implements CrudReposit
 
             statement.setString(1, dentist.getFullName());
             statement.setString(2, dentist.getPhone());
-            statement.setString(3, dentist.getSpecialization().name());
+            statement.setString(3, dentist.getSpecialization().getTitle());
             statement.setInt(4, dentist.getCabinet());
             statement.executeUpdate();
 
@@ -92,7 +93,7 @@ public class DentistRepository extends AbstractRepository implements CrudReposit
 
             statement.setString(1, dentist.getFullName());
             statement.setString(2, dentist.getPhone());
-            statement.setString(3, dentist.getSpecialization().name());
+            statement.setString(3, dentist.getSpecialization().getTitle());
             statement.setInt(4, dentist.getCabinet());
             statement.setInt(5, dentist.getId());
             return statement.executeUpdate() > 0;
@@ -115,12 +116,32 @@ public class DentistRepository extends AbstractRepository implements CrudReposit
         }
     }
 
+    /** Поиск по части ФИО (параметризованный LIKE, без склейки строк). */
+    public List<Dentist> findByNameLike(String part) {
+        String sql = "SELECT " + COLUMNS + " FROM dentists WHERE LOWER(full_name) LIKE ? ORDER BY full_name";
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, "%" + part.toLowerCase() + "%");
+            List<Dentist> dentists = new ArrayList<>();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    dentists.add(map(resultSet));
+                }
+            }
+            return dentists;
+        } catch (SQLException e) {
+            throw translate(e, "найти врачей по ФИО");
+        }
+    }
+
     private Dentist map(ResultSet resultSet) throws SQLException {
         return new Dentist(
                 resultSet.getInt("id"),
                 resultSet.getString("full_name"),
                 resultSet.getString("phone"),
-                Specialization.parse(resultSet.getString("specialization")),
+                Specialization.fromDatabase(resultSet.getString("specialization")),
                 resultSet.getInt("cabinet")
         );
     }

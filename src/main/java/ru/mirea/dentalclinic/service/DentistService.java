@@ -18,7 +18,6 @@ import java.util.regex.Pattern;
 public class DentistService {
 
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?\\d{10,15}$");
-    private static final Pattern NAME_PATTERN = Pattern.compile("^[А-Яа-яЁёA-Za-z\\s\\-]{3,120}$");
     private static final int MIN_CABINET = 1;
     private static final int MAX_CABINET = 500;
 
@@ -32,7 +31,6 @@ public class DentistService {
 
     public Dentist create(String fullName, String phone, Specialization specialization, int cabinet) {
         Dentist dentist = validate(new Dentist(fullName, phone, specialization, cabinet));
-        checkCabinetIsFree(dentist.getCabinet(), 0);
         dentistRepository.save(dentist);
         return dentist;
     }
@@ -52,9 +50,6 @@ public class DentistService {
 
         // повторно используем те же проверки, что и при создании
         Dentist checked = validate(new Dentist(fullName, phone, specialization, cabinet));
-        checkCabinetIsFree(checked.getCabinet(), id);
-        checkSpecializationChange(dentist, checked.getSpecialization());
-
         dentist.setFullName(checked.getFullName());
         dentist.setPhone(checked.getPhone());
         dentist.setSpecialization(checked.getSpecialization());
@@ -79,70 +74,91 @@ public class DentistService {
         dentistRepository.deleteById(id);
     }
 
+    // ------------------------------------------------------------------
+    // Поиск
+    // ------------------------------------------------------------------
+
+    /** Поиск врачей по части ФИО. */
+    public List<Dentist> searchByName(String part) {
+        if (part == null || part.isBlank()) {
+            throw new ValidationException("поисковый запрос не может быть пустым");
+        }
+        return dentistRepository.findByNameLike(part.trim());
+    }
+
+    // ------------------------------------------------------------------
+    // Сортировка (прямая и обратная — см. enum DentistSort)
+    // ------------------------------------------------------------------
+
+    public List<Dentist> findAllSorted(DentistSort sort) {
+        if (sort == null) {
+            throw new ValidationException("способ сортировки не указан");
+        }
+        return dentistRepository.findAll().stream()
+                .sorted(sort.getComparator())
+                .toList();
+    }
+
+    // ------------------------------------------------------------------
+    // Фильтрация
+    // ------------------------------------------------------------------
+
+    /** Фильтр по специализации (enum Specialization). */
+    public List<Dentist> filterBySpecialization(Specialization specialization) {
+        if (specialization == null) {
+            throw new ValidationException("специализация не указана");
+        }
+        return dentistRepository.findAll().stream()
+                .filter(dentist -> dentist.getSpecialization() == specialization)
+                .sorted(DentistSort.NAME_ASC.getComparator())
+                .toList();
+    }
+
+    /** Фильтр по диапазону номеров кабинетов (границы включаются). */
+    public List<Dentist> filterByCabinetRange(int from, int to) {
+        if (from < MIN_CABINET || to > MAX_CABINET) {
+            throw new ValidationException("номера кабинетов должны быть в диапазоне от "
+                    + MIN_CABINET + " до " + MAX_CABINET);
+        }
+        if (to < from) {
+            throw new ValidationException("конечный номер кабинета (" + to
+                    + ") меньше начального (" + from + ")");
+        }
+        return dentistRepository.findAll().stream()
+                .filter(dentist -> dentist.getCabinet() >= from && dentist.getCabinet() <= to)
+                .sorted(DentistSort.CABINET_ASC.getComparator())
+                .toList();
+    }
+
+    /** Фильтр по занятости: только врачи, у которых есть активные (предстоящие) записи. */
+    public List<Dentist> filterWithActiveAppointments() {
+        return dentistRepository.findAll().stream()
+                .filter(dentist -> appointmentRepository.findByDentistId(dentist.getId()).stream()
+                        .anyMatch(Appointment::isActive))
+                .sorted(DentistSort.NAME_ASC.getComparator())
+                .toList();
+    }
+
     public long count() {
         return dentistRepository.count();
     }
 
     private Dentist validate(Dentist dentist) {
-        if (dentist.getFullName() == null || dentist.getFullName().isBlank()) {
-            throw new ValidationException("ФИО врача обязательно для заполнения");
-        }
-        String name = dentist.getFullName().trim().replaceAll("\\s{2,}", " ");
-        if (!NAME_PATTERN.matcher(name).matches()) {
-            throw new ValidationException("ФИО врача должно содержать от 3 до 120 букв,"
-                    + " допустимы только буквы, пробел и дефис: " + dentist.getFullName());
+        if (dentist.getFullName() == null || dentist.getFullName().trim().length() < 3) {
+            throw new ValidationException("ФИО врача обязательно и должно содержать минимум 3 символа");
         }
         if (dentist.getSpecialization() == null) {
             throw new ValidationException("специализация врача обязательна для заполнения");
         }
-
-        // телефон приводится к тому же виду, что и у пациентов: 8XXXXXXXXXX -> +7XXXXXXXXXX
-        String phone = dentist.getPhone() == null ? "" : dentist.getPhone().replaceAll("[\\s()\\-]", "");
-        if (phone.startsWith("8") && phone.length() == 11) {
-            phone = "+7" + phone.substring(1);
-        }
-        if (!PHONE_PATTERN.matcher(phone).matches()) {
-            throw new ValidationException("телефон врача должен содержать от 10 до 15 цифр,"
-                    + " например +79001234567");
+        String normalizedPhone = dentist.getPhone() == null ? "" : dentist.getPhone().replaceAll("[\\s()\\-]", "");
+        if (!PHONE_PATTERN.matcher(normalizedPhone).matches()) {
+            throw new ValidationException("телефон врача должен содержать от 10 до 15 цифр");
         }
         if (dentist.getCabinet() < MIN_CABINET || dentist.getCabinet() > MAX_CABINET) {
             throw new ValidationException("номер кабинета должен быть в диапазоне от "
                     + MIN_CABINET + " до " + MAX_CABINET);
         }
-        return new Dentist(name, phone, dentist.getSpecialization(), dentist.getCabinet());
-    }
-
-    /** БП-11: один кабинет закреплён только за одним врачом. */
-    private void checkCabinetIsFree(int cabinet, int excludedDentistId) {
-        dentistRepository.findAll().stream()
-                .filter(other -> other.getId() != excludedDentistId)
-                .filter(other -> other.getCabinet() == cabinet)
-                .findFirst()
-                .ifPresent(other -> {
-                    throw new BusinessException("кабинет " + cabinet + " уже закреплён за врачом "
-                            + other.getFullName());
-                });
-    }
-
-    /**
-     * БП-10: специализацию нельзя сменить, если у врача остаются активные записи
-     * на процедуры, которые новая специализация выполнять не может.
-     */
-    private void checkSpecializationChange(Dentist dentist, Specialization target) {
-        if (dentist.getSpecialization() == target) {
-            return;
-        }
-        List<Appointment> blocking = appointmentRepository.findByDentistId(dentist.getId()).stream()
-                .filter(Appointment::isActive)
-                .filter(appointment -> !target.canPerform(appointment.getProcedureType()))
-                .toList();
-
-        if (!blocking.isEmpty()) {
-            Appointment first = blocking.get(0);
-            throw new BusinessException("нельзя сменить специализацию на \"" + target.getTitle()
-                    + "\": у врача есть активные записи на процедуры другой специализации ("
-                    + blocking.size() + " шт., например запись #" + first.getId() + " — "
-                    + first.getProcedureType().getTitle() + ")");
-        }
+        return new Dentist(dentist.getFullName().trim(), normalizedPhone,
+                dentist.getSpecialization(), dentist.getCabinet());
     }
 }
