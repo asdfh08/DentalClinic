@@ -61,12 +61,12 @@ public class ConsoleApp {
     private void printMainMenu() {
         System.out.println();
         System.out.println(ConsoleFormat.title(TITLE));
-        System.out.println("1. Пациенты");
-        System.out.println("2. Врачи");
+        System.out.println("1. Пациенты (CRUD, поиск, сортировка, фильтрация)");
+        System.out.println("2. Врачи (CRUD, поиск, сортировка, фильтрация)");
         System.out.println("3. Записи на приём");
         System.out.println("4. Поиск");
-        System.out.println("5. Фильтрация");
-        System.out.println("6. Сортировка");
+        System.out.println("5. Фильтрация записей на приём");
+        System.out.println("6. Сортировка записей на приём");
         System.out.println("7. Статистика");
         System.out.println("8. Экспорт данных");
         System.out.println("9. Вывести таблицы базы данных");

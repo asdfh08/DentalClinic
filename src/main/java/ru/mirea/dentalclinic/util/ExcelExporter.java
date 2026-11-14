@@ -130,7 +130,7 @@ public class ExcelExporter implements DataExporter {
             text(row, 0, String.valueOf(dentist.getId()), textStyle);
             text(row, 1, dentist.getFullName(), textStyle);
             text(row, 2, dentist.getPhone(), textStyle);
-            text(row, 3, dentist.getSpecialization(), textStyle);
+            text(row, 3, dentist.getSpecialization().getTitle(), textStyle);
             text(row, 4, String.valueOf(dentist.getCabinet()), textStyle);
         }
         sheet.createFreezePane(0, 1);

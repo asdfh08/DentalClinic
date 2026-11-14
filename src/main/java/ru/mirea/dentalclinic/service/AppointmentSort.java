@@ -6,7 +6,7 @@ import java.util.Comparator;
 
 /**
  * Способы сортировки записей на приём.
- * Второе перечисление проекта: каждая константа хранит готовый {@link Comparator},
+ * Для каждого параметра есть прямая и обратная сортировка. Каждая константа хранит готовый {@link Comparator},
  * поэтому сервису не нужен switch — он просто вызывает getComparator().
  */
 public enum AppointmentSort {
@@ -23,12 +23,20 @@ public enum AppointmentSort {
     PRICE_ASC("По стоимости: сначала дешёвые",
             Comparator.comparing((Appointment appointment) -> appointment.getPrice())),
 
-    PATIENT_NAME("По ФИО пациента (А-Я)",
+    PATIENT_NAME("По ФИО пациента: А-Я",
             Comparator.comparing((Appointment appointment) -> appointment.getPatientName(),
                     String.CASE_INSENSITIVE_ORDER)),
 
-    STATUS("По статусу, затем по дате приёма",
+    PATIENT_NAME_DESC("По ФИО пациента: Я-А",
+            Comparator.comparing((Appointment appointment) -> appointment.getPatientName(),
+                    String.CASE_INSENSITIVE_ORDER).reversed()),
+
+    STATUS("По статусу (от \"Создана\" к \"Неявка\"), затем по дате приёма",
             Comparator.comparing((Appointment appointment) -> appointment.getStatus())
+                    .thenComparing((Appointment appointment) -> appointment.getAppointmentTime())),
+
+    STATUS_DESC("По статусу (от \"Неявка\" к \"Создана\"), затем по дате приёма",
+            Comparator.comparing((Appointment appointment) -> appointment.getStatus()).reversed()
                     .thenComparing((Appointment appointment) -> appointment.getAppointmentTime()));
 
     private final String title;

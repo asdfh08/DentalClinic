@@ -97,7 +97,7 @@ public class CsvExporter implements DataExporter {
                         String.valueOf(dentist.getId()),
                         dentist.getFullName(),
                         dentist.getPhone(),
-                        dentist.getSpecialization(),
+                        dentist.getSpecialization().getTitle(),
                         String.valueOf(dentist.getCabinet()));
             }
         }

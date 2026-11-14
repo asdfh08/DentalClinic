@@ -68,6 +68,7 @@ public class AnalyticsView extends BaseView {
             System.out.println("5. Записи по тексту жалобы");
             System.out.println("6. Пациенты по ФИО");
             System.out.println("7. Пациенты по телефону");
+            System.out.println("8. Врачи по ФИО");
             System.out.println("0. Назад");
 
             int choice = reader.readInt("Выберите действие: ");
@@ -85,6 +86,8 @@ public class AnalyticsView extends BaseView {
                         patientService.searchByName(reader.readRequired("Часть ФИО: ")))));
                 case 7 -> safe(() -> System.out.println(ConsoleFormat.patientsTable(
                         patientService.searchByPhone(reader.readRequired("Часть телефона: ")))));
+                case 8 -> safe(() -> System.out.println(ConsoleFormat.dentistsTable(
+                        dentistService.searchByName(reader.readRequired("Часть ФИО врача: ")))));
                 case 0 -> inMenu = false;
                 default -> System.out.println("Ошибка: пункта меню " + choice + " не существует.");
             }
@@ -158,7 +161,7 @@ public class AnalyticsView extends BaseView {
     }
 
     // ------------------------------------------------------------------
-    // Сортировка (6 способов, см. enum AppointmentSort)
+    // Сортировка (прямая и обратная по каждому параметру, см. enum AppointmentSort)
     // ------------------------------------------------------------------
 
     public void sortMenu() {

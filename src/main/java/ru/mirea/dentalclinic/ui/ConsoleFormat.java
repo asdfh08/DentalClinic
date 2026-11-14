@@ -89,10 +89,11 @@ public final class ConsoleFormat {
             return "Пациентов не найдено.";
         }
 
-        String format = "%-4s | %-30s | %-16s | %-28s | %-14s | %-8s%n";
+        String format = "%-4s | %-30s | %-16s | %-28s | %-10s | %-7s | %-10s%n";
         StringBuilder table = new StringBuilder();
-        table.append(String.format(format, "ID", "ФИО", "Телефон", "E-mail", "Дата рожд.", "Возраст"));
-        table.append("-".repeat(118)).append(System.lineSeparator());
+        table.append(String.format(format, "ID", "ФИО", "Телефон", "E-mail", "Дата рожд.", "Возраст",
+                "Категория"));
+        table.append("-".repeat(124)).append(System.lineSeparator());
 
         for (Patient patient : patients) {
             table.append(String.format(format,
@@ -101,10 +102,20 @@ public final class ConsoleFormat {
                     patient.getPhone(),
                     Formats.cut(patient.getEmail() == null ? "-" : patient.getEmail(), 28),
                     Formats.date(patient.getBirthDate()),
-                    patient.getAge()));
+                    patient.getAge(),
+                    shortCategory(patient)));
         }
         table.append("Всего пациентов: ").append(patients.size());
         return table.toString();
+    }
+
+    /** Короткое название возрастной категории для колонки таблицы. */
+    private static String shortCategory(Patient patient) {
+        return switch (patient.getAgeCategory()) {
+            case CHILD -> "Ребёнок";
+            case ADULT -> "Взрослый";
+            case SENIOR -> "Пенсионер";
+        };
     }
 
     public static String dentistsTable(List<Dentist> dentists) {
@@ -122,7 +133,7 @@ public final class ConsoleFormat {
                     dentist.getId(),
                     Formats.cut(dentist.getFullName(), 30),
                     dentist.getPhone(),
-                    Formats.cut(dentist.getSpecialization(), 30),
+                    Formats.cut(dentist.getSpecialization().getTitle(), 30),
                     dentist.getCabinet()));
         }
         table.append("Всего врачей: ").append(dentists.size());

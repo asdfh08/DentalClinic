@@ -23,7 +23,7 @@ erDiagram
         SERIAL id PK "первичный ключ"
         VARCHAR(120) full_name "NOT NULL, CHECK длина >= 3"
         VARCHAR(20) phone "NOT NULL, UNIQUE"
-        VARCHAR(60) specialization "NOT NULL"
+        VARCHAR(60) specialization "NOT NULL, CHECK по списку enum Specialization"
         INTEGER cabinet "NOT NULL, CHECK 1..500"
     }
 
