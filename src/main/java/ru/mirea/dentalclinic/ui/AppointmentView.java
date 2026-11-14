@@ -2,14 +2,13 @@ package ru.mirea.dentalclinic.ui;
 
 import ru.mirea.dentalclinic.model.Appointment;
 import ru.mirea.dentalclinic.model.AppointmentStatus;
-import ru.mirea.dentalclinic.model.Dentist;
-import ru.mirea.dentalclinic.model.Patient;
 import ru.mirea.dentalclinic.model.ProcedureType;
 import ru.mirea.dentalclinic.service.AppointmentService;
 import ru.mirea.dentalclinic.service.DentistService;
 import ru.mirea.dentalclinic.service.PatientService;
 import ru.mirea.dentalclinic.util.Formats;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -46,7 +45,8 @@ public class AppointmentView extends BaseView {
             System.out.println("3. Показать запись по ID");
             System.out.println("4. Перенести запись / изменить процедуру");
             System.out.println("5. Изменить статус записи");
-            System.out.println("6. Удалить запись");
+            System.out.println("6. Изменить стоимость приёма");
+            System.out.println("7. Удалить запись");
             System.out.println("0. Назад");
 
             int choice = reader.readInt("Выберите действие: ");
@@ -56,7 +56,8 @@ public class AppointmentView extends BaseView {
                 case 3 -> safe(this::findById);
                 case 4 -> safe(this::reschedule);
                 case 5 -> safe(this::changeStatus);
-                case 6 -> safe(this::delete);
+                case 6 -> safe(this::changePrice);
+                case 7 -> safe(this::delete);
                 case 0 -> inMenu = false;
                 default -> System.out.println("Ошибка: пункта меню " + choice + " не существует.");
             }
@@ -68,31 +69,29 @@ public class AppointmentView extends BaseView {
     }
 
     private void create() {
-        // ID проверяются сразу после ввода, а не в конце анкеты
         System.out.println(ConsoleFormat.patientsTable(patientService.findAll()));
-        Patient patient = patientService.getById(reader.readInt("ID пациента: "));
+        int patientId = reader.readInt("ID пациента: ");
 
         System.out.println(ConsoleFormat.dentistsTable(dentistService.findAll()));
-        Dentist dentist = dentistService.getById(reader.readInt("ID врача: "));
+        int dentistId = reader.readInt("ID врача: ");
 
-        // БП-10: предлагаются только процедуры специализации выбранного врача
-        ProcedureType procedureType = reader.readChoice(
-                "Процедуры врача " + dentist.getFullName()
-                        + " (" + dentist.getSpecialization().getTitle() + "):",
-                dentist.getSpecialization().getProcedures(), this::procedureLabel);
+        LocalDateTime time = reader.readDateTime("Дата и время приёма");
+
+        ProcedureType procedureType = reader.readChoice("Выберите процедуру:",
+                List.of(ProcedureType.values()), this::procedureLabel);
         if (procedureType == null) {
             System.out.println("Создание записи отменено.");
             return;
         }
 
-        LocalDateTime time = reader.readDateTime("Дата и время приёма");
+        BigDecimal price = reader.readOptionalMoney("Стоимость (Enter — базовая "
+                + Formats.money(procedureType.getBasePrice()) + "): ");
         String complaint = reader.readOptional("Жалоба пациента (Enter — пропустить): ");
 
-        // стоимость не вводится: она берётся из прайса процедуры
-        Appointment appointment = appointmentService.create(patient.getId(), dentist.getId(), time,
-                procedureType, complaint);
+        Appointment appointment = appointmentService.create(patientId, dentistId, time,
+                procedureType, price, complaint);
 
-        System.out.println("Запись создана. Стоимость по прайсу: " + Formats.money(appointment.getPrice()));
+        System.out.println("Запись создана.");
         System.out.println(ConsoleFormat.appointmentCard(appointment));
     }
 
@@ -110,11 +109,8 @@ public class AppointmentView extends BaseView {
 
         ProcedureType newProcedure = null;
         if (reader.confirm("Изменить тип процедуры?")) {
-            Dentist dentist = dentistService.getById(current.getDentistId());
-            newProcedure = reader.readChoice(
-                    "Процедуры врача " + dentist.getFullName()
-                            + " (" + dentist.getSpecialization().getTitle() + "), цена изменится по прайсу:",
-                    dentist.getSpecialization().getProcedures(), this::procedureLabel);
+            newProcedure = reader.readChoice("Выберите новую процедуру:",
+                    List.of(ProcedureType.values()), this::procedureLabel);
         }
 
         String newComplaint = reader.readOptional("Новая жалоба (Enter — не менять): ");
@@ -148,6 +144,16 @@ public class AppointmentView extends BaseView {
         Appointment updated = appointmentService.changeStatus(id, target);
         System.out.println("Новый статус записи #" + updated.getId() + ": "
                 + updated.getStatus().getTitle());
+    }
+
+    private void changePrice() {
+        int id = reader.readInt("Введите ID записи: ");
+        Appointment appointment = appointmentService.getById(id);
+        System.out.println("Текущая стоимость: " + Formats.money(appointment.getPrice()));
+
+        BigDecimal price = reader.readOptionalMoney("Новая стоимость (Enter — базовая цена процедуры): ");
+        Appointment updated = appointmentService.changePrice(id, price);
+        System.out.println("Стоимость обновлена: " + Formats.money(updated.getPrice()));
     }
 
     private void delete() {
