@@ -7,16 +7,16 @@ package ru.mirea.dentalclinic.model;
  */
 public class Dentist extends Person {
 
-    private String specialization;
+    private Specialization specialization;
     private int cabinet;
 
-    public Dentist(int id, String fullName, String phone, String specialization, int cabinet) {
+    public Dentist(int id, String fullName, String phone, Specialization specialization, int cabinet) {
         super(id, fullName, phone);
         this.specialization = specialization;
         this.cabinet = cabinet;
     }
 
-    public Dentist(String fullName, String phone, String specialization, int cabinet) {
+    public Dentist(String fullName, String phone, Specialization specialization, int cabinet) {
         this(0, fullName, phone, specialization, cabinet);
     }
 
@@ -27,14 +27,14 @@ public class Dentist extends Person {
 
     @Override
     public String describe() {
-        return super.describe() + ", " + specialization + ", кабинет " + cabinet;
+        return super.describe() + ", " + specialization.getTitle() + ", кабинет " + cabinet;
     }
 
-    public String getSpecialization() {
+    public Specialization getSpecialization() {
         return specialization;
     }
 
-    public void setSpecialization(String specialization) {
+    public void setSpecialization(Specialization specialization) {
         this.specialization = specialization;
     }
 

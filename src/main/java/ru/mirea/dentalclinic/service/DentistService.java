@@ -3,7 +3,9 @@ package ru.mirea.dentalclinic.service;
 import ru.mirea.dentalclinic.exception.BusinessException;
 import ru.mirea.dentalclinic.exception.EntityNotFoundException;
 import ru.mirea.dentalclinic.exception.ValidationException;
+import ru.mirea.dentalclinic.model.Appointment;
 import ru.mirea.dentalclinic.model.Dentist;
+import ru.mirea.dentalclinic.model.Specialization;
 import ru.mirea.dentalclinic.repository.AppointmentRepository;
 import ru.mirea.dentalclinic.repository.DentistRepository;
 
@@ -27,7 +29,7 @@ public class DentistService {
         this.appointmentRepository = appointmentRepository;
     }
 
-    public Dentist create(String fullName, String phone, String specialization, int cabinet) {
+    public Dentist create(String fullName, String phone, Specialization specialization, int cabinet) {
         Dentist dentist = validate(new Dentist(fullName, phone, specialization, cabinet));
         dentistRepository.save(dentist);
         return dentist;
@@ -43,7 +45,7 @@ public class DentistService {
                 .orElseThrow(() -> new EntityNotFoundException("Врач", id));
     }
 
-    public Dentist update(int id, String fullName, String phone, String specialization, int cabinet) {
+    public Dentist update(int id, String fullName, String phone, Specialization specialization, int cabinet) {
         Dentist dentist = getById(id);
 
         // повторно используем те же проверки, что и при создании
@@ -72,6 +74,71 @@ public class DentistService {
         dentistRepository.deleteById(id);
     }
 
+    // ------------------------------------------------------------------
+    // Поиск
+    // ------------------------------------------------------------------
+
+    /** Поиск врачей по части ФИО. */
+    public List<Dentist> searchByName(String part) {
+        if (part == null || part.isBlank()) {
+            throw new ValidationException("поисковый запрос не может быть пустым");
+        }
+        return dentistRepository.findByNameLike(part.trim());
+    }
+
+    // ------------------------------------------------------------------
+    // Сортировка (прямая и обратная — см. enum DentistSort)
+    // ------------------------------------------------------------------
+
+    public List<Dentist> findAllSorted(DentistSort sort) {
+        if (sort == null) {
+            throw new ValidationException("способ сортировки не указан");
+        }
+        return dentistRepository.findAll().stream()
+                .sorted(sort.getComparator())
+                .toList();
+    }
+
+    // ------------------------------------------------------------------
+    // Фильтрация
+    // ------------------------------------------------------------------
+
+    /** Фильтр по специализации (enum Specialization). */
+    public List<Dentist> filterBySpecialization(Specialization specialization) {
+        if (specialization == null) {
+            throw new ValidationException("специализация не указана");
+        }
+        return dentistRepository.findAll().stream()
+                .filter(dentist -> dentist.getSpecialization() == specialization)
+                .sorted(DentistSort.NAME_ASC.getComparator())
+                .toList();
+    }
+
+    /** Фильтр по диапазону номеров кабинетов (границы включаются). */
+    public List<Dentist> filterByCabinetRange(int from, int to) {
+        if (from < MIN_CABINET || to > MAX_CABINET) {
+            throw new ValidationException("номера кабинетов должны быть в диапазоне от "
+                    + MIN_CABINET + " до " + MAX_CABINET);
+        }
+        if (to < from) {
+            throw new ValidationException("конечный номер кабинета (" + to
+                    + ") меньше начального (" + from + ")");
+        }
+        return dentistRepository.findAll().stream()
+                .filter(dentist -> dentist.getCabinet() >= from && dentist.getCabinet() <= to)
+                .sorted(DentistSort.CABINET_ASC.getComparator())
+                .toList();
+    }
+
+    /** Фильтр по занятости: только врачи, у которых есть активные (предстоящие) записи. */
+    public List<Dentist> filterWithActiveAppointments() {
+        return dentistRepository.findAll().stream()
+                .filter(dentist -> appointmentRepository.findByDentistId(dentist.getId()).stream()
+                        .anyMatch(Appointment::isActive))
+                .sorted(DentistSort.NAME_ASC.getComparator())
+                .toList();
+    }
+
     public long count() {
         return dentistRepository.count();
     }
@@ -80,7 +147,7 @@ public class DentistService {
         if (dentist.getFullName() == null || dentist.getFullName().trim().length() < 3) {
             throw new ValidationException("ФИО врача обязательно и должно содержать минимум 3 символа");
         }
-        if (dentist.getSpecialization() == null || dentist.getSpecialization().isBlank()) {
+        if (dentist.getSpecialization() == null) {
             throw new ValidationException("специализация врача обязательна для заполнения");
         }
         String normalizedPhone = dentist.getPhone() == null ? "" : dentist.getPhone().replaceAll("[\\s()\\-]", "");
@@ -92,6 +159,6 @@ public class DentistService {
                     + MIN_CABINET + " до " + MAX_CABINET);
         }
         return new Dentist(dentist.getFullName().trim(), normalizedPhone,
-                dentist.getSpecialization().trim(), dentist.getCabinet());
+                dentist.getSpecialization(), dentist.getCabinet());
     }
 }
