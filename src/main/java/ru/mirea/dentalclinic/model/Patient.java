@@ -46,6 +46,11 @@ public class Patient extends Person {
         return Period.between(birthDate, LocalDate.now()).getYears();
     }
 
+    /** Возрастная категория (enum) определяется по возрасту пациента. */
+    public AgeCategory getAgeCategory() {
+        return AgeCategory.ofAge(getAge());
+    }
+
     public String getEmail() {
         return email;
     }
