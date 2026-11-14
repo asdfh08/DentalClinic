@@ -3,13 +3,12 @@ package ru.mirea.dentalclinic.service;
 import ru.mirea.dentalclinic.exception.BusinessException;
 import ru.mirea.dentalclinic.exception.EntityNotFoundException;
 import ru.mirea.dentalclinic.exception.ValidationException;
-import ru.mirea.dentalclinic.model.AppointmentStatus;
+import ru.mirea.dentalclinic.model.AgeCategory;
 import ru.mirea.dentalclinic.model.Patient;
 import ru.mirea.dentalclinic.repository.AppointmentRepository;
 import ru.mirea.dentalclinic.repository.PatientRepository;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -68,10 +67,8 @@ public class PatientService {
     }
 
     /**
-     * БП-8: нельзя удалить пациента, у которого есть активные записи на приём
-     * или завершённые приёмы. Завершённый приём — это история лечения и выручка клиники
-     * (см. БП-7: саму такую запись удалить тоже нельзя). Отменённые записи и неявки
-     * удаляются вместе с пациентом (ON DELETE CASCADE).
+     * БП-8: нельзя удалить пациента, у которого есть активные записи на приём.
+     * Завершённая история приёмов удаляется вместе с пациентом (ON DELETE CASCADE).
      */
     public void delete(int id) {
         Patient patient = getById(id);
@@ -80,16 +77,7 @@ public class PatientService {
         if (activeAppointments > 0) {
             throw new BusinessException("нельзя удалить пациента " + patient.getFullName()
                     + ": у него есть активные записи на приём (" + activeAppointments + " шт.)."
-                    + " Сначала отмените их");
-        }
-
-        long completed = appointmentRepository.findByPatientId(id).stream()
-                .filter(appointment -> appointment.getStatus() == AppointmentStatus.COMPLETED)
-                .count();
-        if (completed > 0) {
-            throw new BusinessException("нельзя удалить пациента " + patient.getFullName()
-                    + ": у него есть завершённые приёмы (" + completed + " шт.) —"
-                    + " это история лечения, она должна сохраняться");
+                    + " Сначала отмените или завершите их");
         }
         patientRepository.deleteById(id);
     }
@@ -111,10 +99,63 @@ public class PatientService {
         return patientRepository.findByPhoneLike(part.trim());
     }
 
-    /** Сортировка коллекции пациентов по возрасту (Java Collections Framework + Stream API). */
-    public List<Patient> findAllSortedByAge() {
+    // ------------------------------------------------------------------
+    // Сортировка (прямая и обратная — см. enum PatientSort)
+    // ------------------------------------------------------------------
+
+    /** Сортировка коллекции пациентов (Java Collections Framework + Stream API). */
+    public List<Patient> findAllSorted(PatientSort sort) {
+        if (sort == null) {
+            throw new ValidationException("способ сортировки не указан");
+        }
         return patientRepository.findAll().stream()
-                .sorted(Comparator.comparingInt((Patient patient) -> patient.getAge()).reversed())
+                .sorted(sort.getComparator())
+                .toList();
+    }
+
+    // ------------------------------------------------------------------
+    // Фильтрация
+    // ------------------------------------------------------------------
+
+    /** Фильтр по возрастной категории (enum AgeCategory). */
+    public List<Patient> filterByAgeCategory(AgeCategory category) {
+        if (category == null) {
+            throw new ValidationException("возрастная категория не указана");
+        }
+        return patientRepository.findAll().stream()
+                .filter(patient -> patient.getAgeCategory() == category)
+                .sorted(PatientSort.AGE_ASC.getComparator())
+                .toList();
+    }
+
+    /** Фильтр по диапазону возраста в полных годах (границы включаются). */
+    public List<Patient> filterByAgeRange(int minAge, int maxAge) {
+        if (minAge < 0 || maxAge > MAX_AGE) {
+            throw new ValidationException("возраст должен быть в диапазоне от 0 до " + MAX_AGE);
+        }
+        if (maxAge < minAge) {
+            throw new ValidationException("максимальный возраст (" + maxAge
+                    + ") меньше минимального (" + minAge + ")");
+        }
+        return patientRepository.findAll().stream()
+                .filter(patient -> patient.getAge() >= minAge && patient.getAge() <= maxAge)
+                .sorted(PatientSort.AGE_ASC.getComparator())
+                .toList();
+    }
+
+    /** Фильтр по наличию e-mail: true — указан, false — не указан. */
+    public List<Patient> filterByEmailPresence(boolean hasEmail) {
+        return patientRepository.findAll().stream()
+                .filter(patient -> (patient.getEmail() != null && !patient.getEmail().isBlank()) == hasEmail)
+                .sorted(PatientSort.NAME_ASC.getComparator())
+                .toList();
+    }
+
+    /** Фильтр: только пациенты, у которых есть активные (предстоящие) записи на приём. */
+    public List<Patient> filterWithActiveAppointments() {
+        return patientRepository.findAll().stream()
+                .filter(patient -> appointmentRepository.countActiveByPatientId(patient.getId()) > 0)
+                .sorted(PatientSort.NAME_ASC.getComparator())
                 .toList();
     }
 

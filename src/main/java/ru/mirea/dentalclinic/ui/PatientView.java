@@ -1,12 +1,15 @@
 package ru.mirea.dentalclinic.ui;
 
+import ru.mirea.dentalclinic.model.AgeCategory;
 import ru.mirea.dentalclinic.model.Patient;
 import ru.mirea.dentalclinic.service.PatientService;
+import ru.mirea.dentalclinic.service.PatientSort;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
- * Экран работы с пациентами (CRUD + сортировка).
+ * Экран работы с пациентами: CRUD, поиск, сортировка в обе стороны и фильтрация.
  */
 public class PatientView extends BaseView {
 
@@ -31,7 +34,9 @@ public class PatientView extends BaseView {
             System.out.println("3. Найти пациента по ID");
             System.out.println("4. Изменить данные пациента");
             System.out.println("5. Удалить пациента");
-            System.out.println("6. Список пациентов по возрасту (сортировка)");
+            System.out.println("6. Поиск пациентов");
+            System.out.println("7. Сортировка пациентов");
+            System.out.println("8. Фильтрация пациентов");
             System.out.println("0. Назад");
 
             int choice = reader.readInt("Выберите действие: ");
@@ -41,7 +46,9 @@ public class PatientView extends BaseView {
                 case 3 -> safe(this::findById);
                 case 4 -> safe(this::update);
                 case 5 -> safe(this::delete);
-                case 6 -> safe(this::printSortedByAge);
+                case 6 -> safe(this::search);
+                case 7 -> safe(this::sort);
+                case 8 -> safe(this::filterMenu);
                 case 0 -> inMenu = false;
                 default -> System.out.println("Ошибка: пункта меню " + choice + " не существует.");
             }
@@ -52,9 +59,90 @@ public class PatientView extends BaseView {
         System.out.println(ConsoleFormat.patientsTable(patientService.findAll()));
     }
 
-    private void printSortedByAge() {
-        System.out.println("Сортировка: от самого старшего пациента к самому младшему");
-        System.out.println(ConsoleFormat.patientsTable(patientService.findAllSortedByAge()));
+    private void print(List<Patient> patients) {
+        System.out.println(ConsoleFormat.patientsTable(patients));
+    }
+
+    // ------------------------------------------------------------------
+    // Поиск
+    // ------------------------------------------------------------------
+
+    private void search() {
+        System.out.println(ConsoleFormat.subTitle("Поиск пациентов"));
+        System.out.println("1. По части ФИО");
+        System.out.println("2. По части номера телефона");
+        System.out.println("0. Назад");
+
+        int choice = reader.readIntInRange("Выберите действие: ", 0, 2);
+        switch (choice) {
+            case 1 -> print(patientService.searchByName(reader.readRequired("Часть ФИО: ")));
+            case 2 -> print(patientService.searchByPhone(reader.readRequired("Часть телефона: ")));
+            default -> { }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Сортировка: прямая и обратная по ФИО, возрасту и дате регистрации
+    // ------------------------------------------------------------------
+
+    private void sort() {
+        System.out.println(ConsoleFormat.subTitle("Сортировка пациентов"));
+        PatientSort sort = reader.readChoice("Выберите способ сортировки:",
+                List.of(PatientSort.values()), PatientSort::getTitle);
+        if (sort == null) {
+            return;
+        }
+        System.out.println("Сортировка: " + sort.getTitle());
+        print(patientService.findAllSorted(sort));
+    }
+
+    // ------------------------------------------------------------------
+    // Фильтрация
+    // ------------------------------------------------------------------
+
+    private void filterMenu() {
+        boolean inMenu = true;
+        while (inMenu) {
+            System.out.println(ConsoleFormat.subTitle("Фильтрация пациентов"));
+            System.out.println("1. По возрастной категории");
+            System.out.println("2. По диапазону возраста");
+            System.out.println("3. По наличию e-mail");
+            System.out.println("4. Только пациенты с активными записями на приём");
+            System.out.println("0. Назад");
+
+            int choice = reader.readInt("Выберите действие: ");
+            switch (choice) {
+                case 1 -> safe(this::filterByAgeCategory);
+                case 2 -> safe(this::filterByAgeRange);
+                case 3 -> safe(this::filterByEmail);
+                case 4 -> safe(() -> print(patientService.filterWithActiveAppointments()));
+                case 0 -> inMenu = false;
+                default -> System.out.println("Ошибка: пункта меню " + choice + " не существует.");
+            }
+        }
+    }
+
+    private void filterByAgeCategory() {
+        AgeCategory category = reader.readChoice("Выберите возрастную категорию:",
+                List.of(AgeCategory.values()), AgeCategory::getTitle);
+        if (category == null) {
+            return;
+        }
+        System.out.println("Фильтр: " + category.getTitle());
+        print(patientService.filterByAgeCategory(category));
+    }
+
+    private void filterByAgeRange() {
+        int minAge = reader.readInt("Минимальный возраст, лет: ");
+        int maxAge = reader.readInt("Максимальный возраст, лет: ");
+        print(patientService.filterByAgeRange(minAge, maxAge));
+    }
+
+    private void filterByEmail() {
+        boolean hasEmail = reader.confirm("Показать пациентов, у которых e-mail указан?"
+                + " (нет — у которых не указан)");
+        System.out.println("Фильтр: e-mail " + (hasEmail ? "указан" : "не указан"));
+        print(patientService.filterByEmailPresence(hasEmail));
     }
 
     private void create() {
@@ -72,6 +160,7 @@ public class PatientView extends BaseView {
         int id = reader.readInt("Введите ID пациента: ");
         Patient patient = patientService.getById(id);
         System.out.println(patient.describe());
+        System.out.println("Возрастная категория: " + patient.getAgeCategory().getTitle());
         System.out.println("Записей на приём у пациента: " + patientService.countAppointments(id));
     }
 
@@ -102,7 +191,7 @@ public class PatientView extends BaseView {
 
         System.out.println("Будет удалён: " + patient.describe());
         if (appointments > 0) {
-            System.out.println("Внимание: вместе с пациентом будут удалены его отменённые записи и неявки ("
+            System.out.println("Внимание: вместе с пациентом будет удалена история его приёмов ("
                     + appointments + " шт.).");
         }
         if (!reader.confirm("Подтвердите удаление")) {
