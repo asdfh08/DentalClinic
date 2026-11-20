@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Вкладка "Пациенты": связанная сущность и записи выбранного пациента. -->
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="ru.mirea.dentalclinic.fx.controller.PatientsController"
+            styleClass="page">
+    <top>
+        <HBox styleClass="toolbar">
+            <Label text="Пациенты клиники" styleClass="section-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="patientsCountLabel" styleClass="count-label"/>
+            <Button text="Обновить" onAction="#onRefresh"/>
+        </HBox>
+    </top>
+    <center>
+        <SplitPane orientation="VERTICAL" dividerPositions="0.55" styleClass="content-split">
+            <TableView fx:id="patientsTable" styleClass="data-table">
+                <columns>
+                    <TableColumn fx:id="nameColumn" text="ФИО" prefWidth="260"/>
+                    <TableColumn fx:id="phoneColumn" text="Телефон" prefWidth="140"/>
+                    <TableColumn fx:id="emailColumn" text="E-mail" prefWidth="220"/>
+                    <TableColumn fx:id="birthDateColumn" text="Дата рождения" prefWidth="120"/>
+                    <TableColumn fx:id="ageColumn" text="Возраст" prefWidth="80"/>
+                    <TableColumn fx:id="categoryColumn" text="Возрастная категория" prefWidth="200"/>
+                </columns>
+                <placeholder>
+                    <Label text="В базе данных нет пациентов"/>
+                </placeholder>
+            </TableView>
+            <VBox styleClass="related-box">
+                <Label fx:id="patientAppointmentsTitle" styleClass="section-title"/>
+                <TableView fx:id="patientAppointmentsTable" styleClass="data-table" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="timeColumn" text="Дата и время" prefWidth="140"/>
+                        <TableColumn fx:id="dentistColumn" text="Врач" prefWidth="240"/>
+                        <TableColumn fx:id="procedureColumn" text="Процедура" prefWidth="200"/>
+                        <TableColumn fx:id="statusColumn" text="Статус" prefWidth="120"/>
+                        <TableColumn fx:id="priceColumn" text="Стоимость" prefWidth="130"/>
+                    </columns>
+                    <placeholder>
+                        <Label fx:id="patientAppointmentsPlaceholder" text="Выберите пациента в таблице выше"/>
+                    </placeholder>
+                </TableView>
+            </VBox>
+        </SplitPane>
+    </center>
+</BorderPane>
